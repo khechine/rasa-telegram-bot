@@ -77,6 +77,41 @@ class ReportHandler {
           reportData = await this.erpnextService.getPerformanceMetrics();
           return await this.sendMetricsReport(chatId, reportData);
 
+        case "pos":
+        case "pos_sales":
+          reportData = await this.erpnextService.getPOSInvoiceReport(filters);
+          reportTitle = "🏪 Rapport des Ventes POS";
+          reportDescription = "Transactions de caisse";
+          break;
+
+        case "pos_items":
+          reportData = await this.erpnextService.getPOSItemSalesReport(filters);
+          reportTitle = "🏪 Articles POS";
+          reportDescription = "Ventes par article en caisse";
+          break;
+
+        case "pos_cashiers":
+          reportData = await this.erpnextService.getPOSCashierReport(filters);
+          reportTitle = "👨‍💼 Performance Caissiers";
+          reportDescription = "Statistiques par caissier";
+          break;
+
+        case "pos_today":
+          const today = new Date().toISOString().split("T")[0];
+          reportData = await this.erpnextService.getPOSPeriodReport(
+            today,
+            today
+          );
+          return await this.sendPOSPeriodReport(
+            chatId,
+            reportData,
+            "Aujourd'hui"
+          );
+
+        case "pos_dashboard":
+          reportData = await this.erpnextService.getPOSDashboard();
+          return await this.sendPOSDashboardReport(chatId, reportData);
+
         default:
           // Try custom report
           try {
@@ -140,6 +175,19 @@ class ReportHandler {
 
         case "items":
           message += this.formatItemReport(data);
+          break;
+
+        case "pos":
+        case "pos_sales":
+          message += this.formatPOSInvoiceReport(data);
+          break;
+
+        case "pos_items":
+          message += this.formatPOSItemReport(data);
+          break;
+
+        case "pos_cashiers":
+          message += this.formatPOSCashierReport(data);
           break;
 
         default:
@@ -396,6 +444,163 @@ class ReportHandler {
     message += `\n📅 Généré le: ${new Date(data.generated_at).toLocaleString(
       "fr-TN"
     )}`;
+
+    await this.sendMessage(chatId, message);
+  }
+
+  formatPOSInvoiceReport(data) {
+    let message = "";
+    let total = 0;
+
+    data.forEach((invoice, index) => {
+      message += `${index + 1}. **${invoice.name}**\n`;
+      message += `   Client: ${invoice.customer || "Anonyme"}\n`;
+      message += `   Date: ${new Date(invoice.posting_date).toLocaleDateString(
+        "fr-TN"
+      )}\n`;
+      message += `   Heure: ${invoice.posting_time}\n`;
+      message += `   Total: ${invoice.total} TND\n`;
+      message += `   Payé: ${invoice.paid_amount} TND\n`;
+      message += `   Monnaie: ${invoice.change_amount || 0} TND\n`;
+      message += `   Caissier: ${invoice.cashier || "N/A"}\n`;
+      message += `   Statut: ${invoice.status}\n\n`;
+
+      total += invoice.total || 0;
+    });
+
+    message += `💰 **Total POS: ${total.toFixed(2)} TND** (${
+      data.length
+    } transactions)`;
+    return message;
+  }
+
+  formatPOSItemReport(data) {
+    let message = "";
+    let totalQty = 0;
+    let totalAmount = 0;
+
+    data.forEach((item, index) => {
+      message += `${index + 1}. **${item.item_name}**\n`;
+      message += `   Code: ${item.item_code}\n`;
+      message += `   Quantité totale: ${item.total_qty}\n`;
+      message += `   Montant total: ${item.total_amount.toFixed(2)} TND\n`;
+      message += `   Prix moyen: ${item.avg_price.toFixed(2)} TND\n`;
+      message += `   Nombre de ventes: ${item.sales_count}\n`;
+      message += `   Dernière vente: ${new Date(
+        item.last_sale
+      ).toLocaleDateString("fr-TN")}\n\n`;
+
+      totalQty += item.total_qty;
+      totalAmount += item.total_amount;
+    });
+
+    message += `📊 **Total POS: ${totalQty} articles - ${totalAmount.toFixed(
+      2
+    )} TND**`;
+    return message;
+  }
+
+  formatPOSCashierReport(data) {
+    let message = "";
+    let totalSales = 0;
+    let totalInvoices = 0;
+
+    data.forEach((cashier, index) => {
+      message += `${index + 1}. **${cashier.cashier}**\n`;
+      message += `   Transactions: ${cashier.total_invoices}\n`;
+      message += `   Ventes totales: ${cashier.total_sales.toFixed(2)} TND\n`;
+      message += `   Montant perçu: ${cashier.total_paid.toFixed(2)} TND\n`;
+      message += `   Panier moyen: ${(
+        cashier.total_sales / cashier.total_invoices
+      ).toFixed(2)} TND\n\n`;
+
+      totalSales += cashier.total_sales;
+      totalInvoices += cashier.total_invoices;
+    });
+
+    message += `👥 **Équipe POS: ${
+      data.length
+    } caissiers - ${totalSales.toFixed(
+      2
+    )} TND (${totalInvoices} transactions)**`;
+    return message;
+  }
+
+  async sendPOSPeriodReport(chatId, data, periodLabel) {
+    let message = `🏪 **Rapport POS - ${periodLabel}**\n\n`;
+
+    message += `💰 **Ventes totales:** ${data.summary.total_sales.toFixed(
+      2
+    )} TND\n`;
+    message += `🧾 **Nombre de transactions:** ${data.summary.total_invoices}\n`;
+    message += `🛒 **Panier moyen:** ${data.summary.avg_invoice.toFixed(
+      2
+    )} TND\n`;
+    message += `👥 **Nombre de caissiers:** ${data.summary.total_cashiers}\n\n`;
+
+    if (data.top_items && data.top_items.length > 0) {
+      message += `🏆 **Top Articles:**\n`;
+      data.top_items.slice(0, 3).forEach((item, index) => {
+        message += `${index + 1}. ${item.item_name}: ${
+          item.total_qty
+        } unités\n`;
+      });
+      message += `\n`;
+    }
+
+    if (data.cashier_performance && data.cashier_performance.length > 0) {
+      message += `👨‍💼 **Performance Caissiers:**\n`;
+      data.cashier_performance.slice(0, 3).forEach((cashier, index) => {
+        message += `${index + 1}. ${
+          cashier.cashier
+        }: ${cashier.total_sales.toFixed(2)} TND\n`;
+      });
+    }
+
+    message += `\n📅 Généré le: ${new Date(data.generated_at).toLocaleString(
+      "fr-TN"
+    )}`;
+
+    await this.sendMessage(chatId, message);
+  }
+
+  async sendPOSDashboardReport(chatId, data) {
+    let message = "🏪 **Dashboard Ventes POS**\n\n";
+
+    // Today
+    if (data.today) {
+      message += `📅 **Aujourd'hui:**\n`;
+      message += `   💰 ${data.today.summary.total_sales.toFixed(2)} TND\n`;
+      message += `   🧾 ${data.today.summary.total_invoices} transactions\n\n`;
+    }
+
+    // Yesterday
+    if (data.yesterday) {
+      message += `📅 **Hier:**\n`;
+      message += `   💰 ${data.yesterday.summary.total_sales.toFixed(2)} TND\n`;
+      message += `   🧾 ${data.yesterday.summary.total_invoices} transactions\n\n`;
+    }
+
+    // Week
+    if (data.week) {
+      message += `📅 **Cette semaine:**\n`;
+      message += `   💰 ${data.week.summary.total_sales.toFixed(2)} TND\n`;
+      message += `   🧾 ${data.week.summary.total_invoices} transactions\n\n`;
+    }
+
+    // Top selling items
+    if (data.top_selling_items && data.top_selling_items.length > 0) {
+      message += `🏆 **Articles les plus vendus:**\n`;
+      data.top_selling_items.slice(0, 5).forEach((item, index) => {
+        message += `${index + 1}. ${item.item_name} (${
+          item.total_qty
+        } unités)\n`;
+      });
+    }
+
+    message += `\n📅 Dernière mise à jour: ${new Date(
+      data.last_updated
+    ).toLocaleString("fr-TN")}`;
 
     await this.sendMessage(chatId, message);
   }
