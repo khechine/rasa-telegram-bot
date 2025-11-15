@@ -29,7 +29,8 @@ class ERPNextService {
   }
 
   getToken() {
-    return btoa(`${this.apiKey}:${this.apiSecret}`);
+    // ERPNext requires the token in plain text, not base64 encoded
+    return `${this.apiKey}:${this.apiSecret}`;
   }
 
   async testConnection() {
