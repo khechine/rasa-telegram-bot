@@ -233,12 +233,40 @@ class CustomerHandler {
   }
 
   async getSalesInvoices(chatId, customerId = null) {
-    if (!this.useERPNext) {
-      await this.sendMessage(
-        chatId,
-        "❌ Fonction factures non disponible (stockage local uniquement)"
-      );
-      return;
+    // Always try ERPNext first, fallback to local storage if not available
+    try {
+      const invoices = await this.erpnextService.getSalesInvoices(customerId);
+
+      if (invoices.length === 0) {
+        await this.sendMessage(chatId, "📄 Aucune facture trouvée.");
+        return;
+      }
+
+      let message = "📄 Liste des factures:\n\n";
+      invoices.forEach((invoice, index) => {
+        message += `${index + 1}. **Facture ${invoice.id}**\n`;
+        message += `   Client: ${invoice.customerId}\n`;
+        message += `   Statut: ${invoice.status}\n`;
+        message += `   Total: ${invoice.total || "N/A"} TND\n`;
+        message += `   Date: ${new Date(invoice.date).toLocaleDateString(
+          "fr-TN"
+        )}\n\n`;
+      });
+
+      await this.sendMessage(chatId, message, { parse_mode: "Markdown" });
+    } catch (error) {
+      console.error("Error getting sales invoices:", error);
+      if (!this.useERPNext) {
+        await this.sendMessage(
+          chatId,
+          "❌ Fonction factures non disponible (ERPNext non configuré)"
+        );
+      } else {
+        await this.sendMessage(
+          chatId,
+          "❌ Erreur lors de la récupération des factures."
+        );
+      }
     }
 
     try {

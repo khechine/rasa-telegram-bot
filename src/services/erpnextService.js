@@ -75,7 +75,12 @@ class ERPNextService {
         ];
       }
 
-      const response = await this.frappe.db.insert(customerPayload);
+      const response = await this.frappe.call({
+        method: "frappe.client.insert",
+        args: {
+          doc: customerPayload,
+        },
+      });
       return {
         id: response.name,
         name: response.customer_name,
