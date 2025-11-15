@@ -138,7 +138,8 @@ class ERPNextService {
       }));
     } catch (error) {
       console.error("Error getting customers from ERPNext:", error);
-      throw new Error(`Failed to get customers: ${error.message}`);
+      // Return empty array to allow bot to work with cached data
+      return [];
     }
   }
 
@@ -289,7 +290,8 @@ class ERPNextService {
       }));
     } catch (error) {
       console.error("Error getting sales invoices from ERPNext:", error);
-      throw new Error(`Failed to get sales invoices: ${error.message}`);
+      // Return empty array to allow bot to work
+      return [];
     }
   }
 
