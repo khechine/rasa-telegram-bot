@@ -111,22 +111,24 @@ class ERPNextService {
 
   async getCustomers() {
     try {
-      const response = await this.frappe.call({
-        method: "frappe.client.get_list",
-        args: {
+      // Direct axios call since frappe.call returns FrappeCall object without data
+      const axiosResponse = await this.frappe.axios.post(
+        "/api/method/frappe.client.get_list",
+        {
           doctype: "Customer",
-          fields: [
-            "name",
-            "customer_name",
-            "email_id",
-            "mobile_no",
-            "creation",
-          ],
+          fields:
+            '["name", "customer_name", "email_id", "mobile_no", "creation"]',
           limit_page_length: 50,
         },
-      });
+        {
+          headers: {
+            Authorization: `token ${this.apiKey}:${this.apiSecret}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-      const customers = response.message || [];
+      const customers = axiosResponse.data.message || [];
       return customers.map((customer) => ({
         id: customer.name,
         name: customer.customer_name,
@@ -258,24 +260,25 @@ class ERPNextService {
         filters.customer = customerId;
       }
 
-      const response = await this.frappe.call({
-        method: "frappe.client.get_list",
-        args: {
+      // Direct axios call since frappe.call returns FrappeCall object without data
+      const axiosResponse = await this.frappe.axios.post(
+        "/api/method/frappe.client.get_list",
+        {
           doctype: "Sales Invoice",
-          fields: [
-            "name",
-            "customer",
-            "status",
-            "total",
-            "posting_date",
-            "creation",
-          ],
+          fields:
+            '["name", "customer", "status", "total", "posting_date", "creation"]',
           filters: filters,
           limit_page_length: 20,
         },
-      });
+        {
+          headers: {
+            Authorization: `token ${this.apiKey}:${this.apiSecret}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-      const invoices = response.message || [];
+      const invoices = axiosResponse.data.message || [];
       return invoices.map((invoice) => ({
         id: invoice.name,
         customerId: invoice.customer,
