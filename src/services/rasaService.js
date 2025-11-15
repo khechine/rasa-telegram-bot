@@ -11,8 +11,15 @@ class RasaService {
     try {
       const payload = {
         sender: senderId,
-        message: message,
+        message: {
+          text: message,
+        },
       };
+
+      console.log(
+        `Sending to Rasa: ${this.fullUrl}`,
+        JSON.stringify(payload, null, 2)
+      );
 
       const response = await axios.post(this.fullUrl, payload, {
         timeout: 10000, // 10 seconds timeout
@@ -21,9 +28,12 @@ class RasaService {
         },
       });
 
+      console.log(`Rasa response:`, JSON.stringify(response.data, null, 2));
+
       return this.parseRasaResponse(response.data);
     } catch (error) {
       console.error("Error communicating with Rasa:", error.message);
+      console.error("Full error:", error);
       throw new Error(`Failed to get response from Rasa: ${error.message}`);
     }
   }
