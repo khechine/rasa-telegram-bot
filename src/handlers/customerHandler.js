@@ -236,7 +236,7 @@ class CustomerHandler {
     if (!this.useERPNext) {
       await this.sendMessage(
         chatId,
-        "❌ Fonction factures non disponible (ERPNext non configuré)"
+        "❌ Fonction factures non disponible (stockage local uniquement)"
       );
       return;
     }
