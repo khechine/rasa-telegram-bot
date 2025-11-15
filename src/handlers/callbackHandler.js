@@ -82,6 +82,10 @@ class CallbackHandler {
           await this.handleReportsMenuCallback(chatId);
           break;
 
+        case "pos_reports_menu":
+          await this.handlePOSReportsMenuCallback(chatId);
+          break;
+
         case "back_to_main":
           await this.handleBackToMainCallback(chatId);
           break;
@@ -137,6 +141,17 @@ class CallbackHandler {
       parse_mode: "Markdown",
       reply_markup: {
         inline_keyboard: ResponseBuilder.getReportsMenuKeyboard(),
+      },
+    });
+  }
+
+  async handlePOSReportsMenuCallback(chatId) {
+    const message =
+      "🏪 *Rapports Ventes POS*\n\nChoisissez le rapport souhaité :";
+    await this.bot.sendMessage(chatId, message, {
+      parse_mode: "Markdown",
+      reply_markup: {
+        inline_keyboard: ResponseBuilder.getPOSReportsMenuKeyboard(),
       },
     });
   }

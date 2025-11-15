@@ -36,10 +36,13 @@ class ResponseBuilder {
       `Je peux vous aider avec:\n\n` +
       `• Créer un nouveau client\n` +
       `• Consulter la liste des clients\n` +
-      `• Gérer les devis\n\n` +
+      `• Gérer les devis et factures\n` +
+      `• Accéder aux rapports et analyses\n` +
+      `• Consulter les ventes POS\n\n` +
       `Exemples de commandes:\n` +
       `• "Créer un client Dupont dupont@email.com"\n` +
       `• "Voir mes clients"\n` +
+      `• "Rapport ventes POS"\n` +
       `• "Aide"\n\n` +
       `Que souhaitez-vous faire ?`;
 
@@ -57,7 +60,9 @@ class ResponseBuilder {
       `👋 Bonjour ! Je suis votre assistant de gestion client.\n\n` +
       `Je peux vous aider à:\n` +
       `• Créer et gérer vos clients\n` +
-      `• Consulter les devis\n` +
+      `• Consulter les devis et factures\n` +
+      `• Accéder aux rapports et analyses\n` +
+      `• Gérer les ventes POS\n` +
       `• Et bien plus encore !\n\n` +
       `Comment puis-je vous aider aujourd'hui ?`;
 
@@ -153,7 +158,10 @@ class ResponseBuilder {
         { text: "📊 Rapports", callback_data: "reports_menu" },
         { text: "📈 Dashboard", callback_data: "dashboard" },
       ],
-      [{ text: "❓ Aide", callback_data: "help" }],
+      [
+        { text: "🏪 POS", callback_data: "pos_dashboard" },
+        { text: "❓ Aide", callback_data: "help" },
+      ],
     ];
   }
 
@@ -172,9 +180,28 @@ class ResponseBuilder {
         { text: "📈 Financier", callback_data: "financial_report" },
       ],
       [
+        { text: "🏪 POS", callback_data: "pos_reports_menu" },
         { text: "📊 Métriques", callback_data: "metrics" },
-        { text: "⬅️ Retour", callback_data: "back_to_main" },
       ],
+      [{ text: "⬅️ Retour", callback_data: "back_to_main" }],
+    ];
+  }
+
+  static getPOSReportsMenuKeyboard() {
+    return [
+      [
+        { text: "📊 Ventes POS", callback_data: "pos" },
+        { text: "📦 Articles POS", callback_data: "pos_items" },
+      ],
+      [
+        { text: "👨‍💼 Performance Caissiers", callback_data: "pos_cashiers" },
+        { text: "📅 Aujourd'hui", callback_data: "pos_today" },
+      ],
+      [
+        { text: "🔍 Période spécifique", callback_data: "pos_period_menu" },
+        { text: "📈 Dashboard POS", callback_data: "pos_dashboard" },
+      ],
+      [{ text: "⬅️ Retour", callback_data: "reports_menu" }],
     ];
   }
 
