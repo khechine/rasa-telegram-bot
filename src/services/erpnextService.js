@@ -597,6 +597,218 @@ class ERPNextService {
       throw new Error(`Failed to get performance metrics: ${error.message}`);
     }
   }
+
+  // Advanced quotation creation with items
+  async createQuotationWithItems(quotationData) {
+    try {
+      // First, validate and lookup items
+      const validatedItems = [];
+      for (const item of quotationData.items) {
+        const itemData = await this.findItemByName(item.itemName);
+        if (!itemData) {
+          throw new Error(`Article non trouvé: ${item.itemName}`);
+        }
+
+        validatedItems.push({
+          item_code: itemData.item_code,
+          item_name: itemData.item_name,
+          qty: item.quantity,
+          rate: itemData.valuation_rate || itemData.last_purchase_rate || 0,
+          amount:
+            (itemData.valuation_rate || itemData.last_purchase_rate || 0) *
+            item.quantity,
+        });
+      }
+
+      // Ensure customer exists
+      let customer = await this.findCustomerByName(quotationData.customerName);
+      if (!customer) {
+        // Create customer if not exists
+        customer = await this.createCustomer({
+          name: quotationData.customerName,
+          email: quotationData.customerEmail,
+        });
+      }
+
+      // Create quotation
+      const quotationPayload = {
+        doctype: "Quotation",
+        quotation_to: "Customer",
+        party_name: customer.id,
+        company: "Your Company", // Configure this based on your setup
+        transaction_date: new Date().toISOString().split("T")[0],
+        items: validatedItems,
+        valid_till: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0], // 30 days validity
+      };
+
+      const response = await this.frappe.db.insert(quotationPayload);
+
+      return {
+        id: response.name,
+        customerId: response.party_name,
+        customerName: quotationData.customerName,
+        customerEmail: quotationData.customerEmail,
+        items: validatedItems.map((item) => ({
+          quantity: item.qty,
+          itemName: item.item_name,
+          unitPrice: item.rate,
+          totalPrice: item.amount,
+        })),
+        total:
+          response.total ||
+          validatedItems.reduce((sum, item) => sum + item.amount, 0),
+        status: response.status,
+        validTill: quotationPayload.valid_till,
+        createdAt: response.creation,
+      };
+    } catch (error) {
+      console.error("Error creating quotation with items in ERPNext:", error);
+      throw new Error(`Failed to create quotation: ${error.message}`);
+    }
+  }
+
+  // Find item by name (fuzzy matching)
+  async findItemByName(itemName) {
+    try {
+      // Try exact match first
+      let items = await this.frappe.db.get_list("Item", {
+        filters: { item_name: ["like", itemName] },
+        fields: [
+          "name",
+          "item_name",
+          "item_code",
+          "valuation_rate",
+          "last_purchase_rate",
+          "stock_uom",
+        ],
+        limit: 5,
+      });
+
+      if (items.length === 0) {
+        // Try partial match
+        items = await this.frappe.db.get_list("Item", {
+          filters: { item_name: ["like", `%${itemName}%`] },
+          fields: [
+            "name",
+            "item_name",
+            "item_code",
+            "valuation_rate",
+            "last_purchase_rate",
+            "stock_uom",
+          ],
+          limit: 5,
+        });
+      }
+
+      // Return best match or null
+      return items.length > 0 ? items[0] : null;
+    } catch (error) {
+      console.error("Error finding item by name:", error);
+      return null;
+    }
+  }
+
+  // Find customer by name
+  async findCustomerByName(customerName) {
+    try {
+      const customers = await this.frappe.db.get_list("Customer", {
+        filters: { customer_name: ["like", `%${customerName}%`] },
+        fields: ["name", "customer_name", "email_id"],
+        limit: 1,
+      });
+
+      return customers.length > 0
+        ? {
+            id: customers[0].name,
+            name: customers[0].customer_name,
+            email: customers[0].email_id,
+          }
+        : null;
+    } catch (error) {
+      console.error("Error finding customer by name:", error);
+      return null;
+    }
+  }
+
+  // Generate PDF for quotation
+  async generateQuotationPDF(quotationId) {
+    try {
+      const pdfResponse = await this.frappe.call({
+        method: "frappe.utils.print_format.download_pdf",
+        args: {
+          doctype: "Quotation",
+          name: quotationId,
+          format: "Standard", // or your custom print format
+          no_letterhead: 0,
+        },
+      });
+
+      return pdfResponse.message;
+    } catch (error) {
+      console.error("Error generating quotation PDF:", error);
+      throw new Error(`Failed to generate PDF: ${error.message}`);
+    }
+  }
+
+  // Send email with PDF attachment
+  async sendQuotationEmail(quotationId, recipientEmail, customMessage = "") {
+    try {
+      const emailPayload = {
+        recipients: [recipientEmail],
+        subject: `Devis ${quotationId}`,
+        content:
+          customMessage ||
+          `Veuillez trouver ci-joint le devis ${quotationId}.\n\nCordialement,\nVotre équipe commerciale`,
+        doctype: "Quotation",
+        name: quotationId,
+        send_email: 1,
+        print_format: "Standard",
+      };
+
+      const response = await this.frappe.call({
+        method: "frappe.core.doctype.communication.email.make",
+        args: emailPayload,
+      });
+
+      return response;
+    } catch (error) {
+      console.error("Error sending quotation email:", error);
+      throw new Error(`Failed to send email: ${error.message}`);
+    }
+  }
+
+  // Get quotation details with items
+  async getQuotationDetails(quotationId) {
+    try {
+      const quotation = await this.frappe.db.get_doc("Quotation", quotationId);
+      const items = await this.frappe.db.get_list("Quotation Item", {
+        filters: { parent: quotationId },
+        fields: ["item_code", "item_name", "qty", "rate", "amount"],
+      });
+
+      return {
+        id: quotation.name,
+        customerId: quotation.party_name,
+        customerName: quotation.customer_name,
+        status: quotation.status,
+        total: quotation.total,
+        items: items.map((item) => ({
+          itemCode: item.item_code,
+          itemName: item.item_name,
+          quantity: item.qty,
+          unitPrice: item.rate,
+          totalPrice: item.amount,
+        })),
+        transactionDate: quotation.transaction_date,
+        validTill: quotation.valid_till,
+      };
+    } catch (error) {
+      console.error("Error getting quotation details:", error);
+      throw new Error(`Failed to get quotation details: ${error.message}`);
+    }
+  }
 }
 
 module.exports = ERPNextService;

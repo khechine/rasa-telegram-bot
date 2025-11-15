@@ -5,6 +5,7 @@ const ERPNextService = require("./services/erpnextService");
 const MessageHandler = require("./handlers/messageHandler");
 const CallbackHandler = require("./handlers/callbackHandler");
 const ReportHandler = require("./handlers/reportHandler");
+const QuotationHandler = require("./handlers/quotationHandler");
 
 const token = process.env.TELEGRAM_TOKEN;
 if (!token) {
@@ -44,17 +45,22 @@ if (
 const reportHandler = new ReportHandler(erpnextService);
 reportHandler.setBot(bot);
 
+const quotationHandler = new QuotationHandler(erpnextService);
+quotationHandler.setBot(bot);
+
 const messageHandler = new MessageHandler(
   bot,
   rasaService,
   erpnextService,
-  reportHandler
+  reportHandler,
+  quotationHandler
 );
 const callbackHandler = new CallbackHandler(
   bot,
   rasaService,
   erpnextService,
-  reportHandler
+  reportHandler,
+  quotationHandler
 );
 
 console.log("Bot is running...");

@@ -3,7 +3,13 @@ const CustomerHandler = require("./customerHandler");
 const Parsers = require("../utils/parsers");
 
 class MessageHandler {
-  constructor(bot, rasaService, erpnextService = null, reportHandler = null) {
+  constructor(
+    bot,
+    rasaService,
+    erpnextService = null,
+    reportHandler = null,
+    quotationHandler = null
+  ) {
     this.bot = bot;
     this.rasaService = rasaService;
     this.customerHandler = new CustomerHandler(
@@ -12,6 +18,7 @@ class MessageHandler {
       erpnextService
     );
     this.reportHandler = reportHandler;
+    this.quotationHandler = quotationHandler;
   }
 
   async handleMessage(msg) {
@@ -159,6 +166,17 @@ class MessageHandler {
 
       case "greet":
         await this.handleGreeting(chatId);
+        break;
+
+      case "create_quotation":
+        if (this.quotationHandler) {
+          await this.quotationHandler.handleQuotationCreation(
+            chatId,
+            rasaResponse.text || text
+          );
+        } else {
+          await this.sendMessage(chatId, "❌ Fonction devis non disponible");
+        }
         break;
 
       default:

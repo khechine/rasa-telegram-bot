@@ -2,7 +2,13 @@ const ResponseBuilder = require("../utils/responseBuilder");
 const CustomerHandler = require("./customerHandler");
 
 class CallbackHandler {
-  constructor(bot, rasaService, erpnextService = null, reportHandler = null) {
+  constructor(
+    bot,
+    rasaService,
+    erpnextService = null,
+    reportHandler = null,
+    quotationHandler = null
+  ) {
     this.bot = bot;
     this.rasaService = rasaService;
     this.customerHandler = new CustomerHandler(
@@ -11,6 +17,7 @@ class CallbackHandler {
       erpnextService
     );
     this.reportHandler = reportHandler;
+    this.quotationHandler = quotationHandler;
   }
 
   async handleCallback(query) {
@@ -79,6 +86,10 @@ class CallbackHandler {
           await this.handleBackToMainCallback(chatId);
           break;
 
+        case "create_quotation":
+          await this.handleCreateQuotationCallback(chatId);
+          break;
+
         case "help":
           await this.handleHelpCallback(chatId);
           break;
@@ -135,6 +146,16 @@ class CallbackHandler {
     await this.bot.sendMessage(chatId, message, {
       reply_markup: {
         inline_keyboard: ResponseBuilder.getMainMenuKeyboard(),
+      },
+    });
+  }
+
+  async handleCreateQuotationCallback(chatId) {
+    const message =
+      "📝 Création de devis\n\nDites-moi les articles et le client (ex: '5 pains, 2 gateaux chocolat pour le client Dupont avec email dupont@example.com')";
+    await this.bot.sendMessage(chatId, message, {
+      reply_markup: {
+        force_reply: true,
       },
     });
   }
