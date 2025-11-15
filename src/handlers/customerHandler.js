@@ -1,10 +1,13 @@
 const Parsers = require("../utils/parsers");
+const ERPNextService = require("../services/erpnextService");
 
 class CustomerHandler {
-  constructor(bot, rasaService) {
+  constructor(bot, rasaService, erpnextService = null) {
     this.bot = bot;
     this.rasaService = rasaService;
-    this.customers = new Map(); // In-memory storage, replace with database in production
+    this.erpnextService = erpnextService;
+    this.customers = new Map(); // Fallback in-memory storage
+    this.useERPNext = erpnextService && erpnextService.isConnected;
   }
 
   async handleCustomerCreation(chatId, rasaResponse) {
@@ -42,9 +45,23 @@ class CustomerHandler {
   }
 
   async createCustomer(customerData) {
-    // Generate unique ID
-    const customerId = Date.now().toString();
+    if (this.useERPNext) {
+      try {
+        const erpnextCustomer = await this.erpnextService.createCustomer(
+          customerData
+        );
+        return erpnextCustomer;
+      } catch (error) {
+        console.error(
+          "ERPNext customer creation failed, falling back to local storage:",
+          error.message
+        );
+        // Fall back to local storage if ERPNext fails
+      }
+    }
 
+    // Fallback to in-memory storage
+    const customerId = Date.now().toString();
     const customer = {
       id: customerId,
       name: customerData.name,
@@ -52,9 +69,7 @@ class CustomerHandler {
       createdAt: new Date().toISOString(),
     };
 
-    // Store in memory (replace with database)
     this.customers.set(customerId, customer);
-
     return customer;
   }
 
@@ -77,7 +92,21 @@ class CustomerHandler {
 
   async getCustomers(chatId) {
     try {
-      const customers = Array.from(this.customers.values());
+      let customers = [];
+
+      if (this.useERPNext) {
+        try {
+          customers = await this.erpnextService.getCustomers();
+        } catch (error) {
+          console.error(
+            "ERPNext customer retrieval failed, falling back to local storage:",
+            error.message
+          );
+          customers = Array.from(this.customers.values());
+        }
+      } else {
+        customers = Array.from(this.customers.values());
+      }
 
       if (customers.length === 0) {
         await this.sendMessage(
@@ -89,7 +118,11 @@ class CustomerHandler {
 
       let message = "📋 Liste des clients:\n\n";
       customers.forEach((customer, index) => {
-        message += `${index + 1}. **${customer.name}** (${customer.email})\n`;
+        message += `${index + 1}. **${customer.name}**`;
+        if (customer.email) {
+          message += ` (${customer.email})`;
+        }
+        message += "\n";
       });
 
       await this.sendMessage(chatId, message, { parse_mode: "Markdown" });
@@ -108,6 +141,18 @@ class CustomerHandler {
 
   // Additional methods for customer management
   async updateCustomer(customerId, updates) {
+    if (this.useERPNext) {
+      try {
+        return await this.erpnextService.updateCustomer(customerId, updates);
+      } catch (error) {
+        console.error(
+          "ERPNext customer update failed, falling back to local storage:",
+          error.message
+        );
+      }
+    }
+
+    // Fallback to local storage
     const customer = this.customers.get(customerId);
     if (!customer) {
       throw new Error("Client non trouvé");
@@ -118,11 +163,111 @@ class CustomerHandler {
   }
 
   async deleteCustomer(customerId) {
+    if (this.useERPNext) {
+      // Note: ERPNext doesn't typically allow customer deletion, but we can mark as disabled
+      try {
+        await this.erpnextService.updateCustomer(customerId, { disabled: 1 });
+        return true;
+      } catch (error) {
+        console.error("ERPNext customer deletion failed:", error.message);
+        return false;
+      }
+    }
+
     return this.customers.delete(customerId);
   }
 
-  getCustomer(customerId) {
+  async getCustomer(customerId) {
+    if (this.useERPNext) {
+      try {
+        return await this.erpnextService.getCustomer(customerId);
+      } catch (error) {
+        console.error(
+          "ERPNext customer retrieval failed, falling back to local storage:",
+          error.message
+        );
+        return this.customers.get(customerId);
+      }
+    }
+
     return this.customers.get(customerId);
+  }
+
+  // ERPNext-specific methods
+  async getQuotations(chatId, customerId = null) {
+    if (!this.useERPNext) {
+      await this.sendMessage(
+        chatId,
+        "❌ Fonction devis non disponible (ERPNext non configuré)"
+      );
+      return;
+    }
+
+    try {
+      const quotations = await this.erpnextService.getQuotations(customerId);
+
+      if (quotations.length === 0) {
+        await this.sendMessage(chatId, "📄 Aucun devis trouvé.");
+        return;
+      }
+
+      let message = "📄 Liste des devis:\n\n";
+      quotations.forEach((quotation, index) => {
+        message += `${index + 1}. **Devis ${quotation.id}**\n`;
+        message += `   Client: ${quotation.customerId}\n`;
+        message += `   Statut: ${quotation.status}\n`;
+        message += `   Total: ${quotation.total || "N/A"} TND\n`;
+        message += `   Date: ${new Date(quotation.date).toLocaleDateString(
+          "fr-TN"
+        )}\n\n`;
+      });
+
+      await this.sendMessage(chatId, message, { parse_mode: "Markdown" });
+    } catch (error) {
+      console.error("Error getting quotations:", error);
+      await this.sendMessage(
+        chatId,
+        "❌ Erreur lors de la récupération des devis."
+      );
+    }
+  }
+
+  async getSalesInvoices(chatId, customerId = null) {
+    if (!this.useERPNext) {
+      await this.sendMessage(
+        chatId,
+        "❌ Fonction factures non disponible (ERPNext non configuré)"
+      );
+      return;
+    }
+
+    try {
+      const invoices = await this.erpnextService.getSalesInvoices(customerId);
+
+      if (invoices.length === 0) {
+        await this.sendMessage(chatId, "📄 Aucune facture trouvée.");
+        return;
+      }
+
+      let message = "📄 Liste des factures:\n\n";
+      invoices.forEach((invoice, index) => {
+        message += `${index + 1}. **Facture ${invoice.id}**\n`;
+        message += `   Client: ${invoice.customerId}\n`;
+        message += `   Statut: ${invoice.status}\n`;
+        message += `   Total: ${invoice.total || "N/A"} TND\n`;
+        message += `   Date: ${new Date(invoice.date).toLocaleDateString(
+          "fr-TN"
+        )}\n\n`;
+      });
+
+      await this.sendMessage(chatId, message, { parse_mode: "Markdown" });
+    } catch (error) {
+      console.error("Error getting sales invoices:", error);
+      await this.sendMessage(
+        chatId,
+        "❌ Erreur lors de la récupération des factures."
+      );
+    }
   }
 }
 

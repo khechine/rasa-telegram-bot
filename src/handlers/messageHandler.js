@@ -3,10 +3,14 @@ const CustomerHandler = require("./customerHandler");
 const Parsers = require("../utils/parsers");
 
 class MessageHandler {
-  constructor(bot, rasaService) {
+  constructor(bot, rasaService, erpnextService = null) {
     this.bot = bot;
     this.rasaService = rasaService;
-    this.customerHandler = new CustomerHandler(bot, rasaService);
+    this.customerHandler = new CustomerHandler(
+      bot,
+      rasaService,
+      erpnextService
+    );
   }
 
   async handleMessage(msg) {
@@ -108,11 +112,11 @@ class MessageHandler {
         break;
 
       case "get_quotation":
-        const quotationResponse = ResponseBuilder.buildQuotationResponse();
-        await this.bot.sendMessage(chatId, quotationResponse.text, {
-          parse_mode: quotationResponse.parse_mode,
-          reply_markup: quotationResponse.reply_markup,
-        });
+        await this.customerHandler.getQuotations(chatId);
+        break;
+
+      case "get_invoices":
+        await this.customerHandler.getSalesInvoices(chatId);
         break;
 
       case "help":

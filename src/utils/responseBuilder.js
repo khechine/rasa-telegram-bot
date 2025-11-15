@@ -148,6 +148,7 @@ class ResponseBuilder {
       [{ text: "👤 Créer un client", callback_data: "create_customer" }],
       [{ text: "📋 Voir les clients", callback_data: "list_customers" }],
       [{ text: "📄 Voir les devis", callback_data: "get_quotation" }],
+      [{ text: "📄 Voir les factures", callback_data: "get_invoices" }],
       [{ text: "❓ Aide", callback_data: "help" }],
     ];
   }

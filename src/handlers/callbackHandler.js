@@ -2,10 +2,14 @@ const ResponseBuilder = require("../utils/responseBuilder");
 const CustomerHandler = require("./customerHandler");
 
 class CallbackHandler {
-  constructor(bot, rasaService) {
+  constructor(bot, rasaService, erpnextService = null) {
     this.bot = bot;
     this.rasaService = rasaService;
-    this.customerHandler = new CustomerHandler(bot, rasaService);
+    this.customerHandler = new CustomerHandler(
+      bot,
+      rasaService,
+      erpnextService
+    );
   }
 
   async handleCallback(query) {
@@ -28,6 +32,10 @@ class CallbackHandler {
 
         case "get_quotation":
           await this.handleQuotationCallback(chatId);
+          break;
+
+        case "get_invoices":
+          await this.handleInvoicesCallback(chatId);
           break;
 
         case "help":
@@ -63,11 +71,11 @@ class CallbackHandler {
   }
 
   async handleQuotationCallback(chatId) {
-    const response = ResponseBuilder.buildQuotationResponse();
-    await this.bot.sendMessage(chatId, response.text, {
-      parse_mode: response.parse_mode,
-      reply_markup: response.reply_markup,
-    });
+    await this.customerHandler.getQuotations(chatId);
+  }
+
+  async handleInvoicesCallback(chatId) {
+    await this.customerHandler.getSalesInvoices(chatId);
   }
 
   async handleHelpCallback(chatId) {

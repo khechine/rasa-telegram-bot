@@ -1,6 +1,7 @@
 require("dotenv").config();
 const TelegramBot = require("node-telegram-bot-api");
 const RasaService = require("./services/rasaService");
+const ERPNextService = require("./services/erpnextService");
 const MessageHandler = require("./handlers/messageHandler");
 const CallbackHandler = require("./handlers/callbackHandler");
 
@@ -15,8 +16,32 @@ const rasaService = new RasaService(
   process.env.RASA_URL,
   process.env.RASA_WEBHOOK_PATH
 );
-const messageHandler = new MessageHandler(bot, rasaService);
-const callbackHandler = new CallbackHandler(bot, rasaService);
+
+// Initialize ERPNext service if configured
+let erpnextService = null;
+if (
+  process.env.ERPNext_URL &&
+  process.env.ERPNext_API_KEY &&
+  process.env.ERPNext_API_SECRET
+) {
+  erpnextService = new ERPNextService(
+    process.env.ERPNext_URL,
+    process.env.ERPNext_API_KEY,
+    process.env.ERPNext_API_SECRET
+  );
+
+  // Initialize ERPNext connection
+  erpnextService.initialize().catch((error) => {
+    console.warn(
+      "ERPNext initialization failed, continuing without ERPNext integration:",
+      error.message
+    );
+    erpnextService = null;
+  });
+}
+
+const messageHandler = new MessageHandler(bot, rasaService, erpnextService);
+const callbackHandler = new CallbackHandler(bot, rasaService, erpnextService);
 
 console.log("Bot is running...");
 
