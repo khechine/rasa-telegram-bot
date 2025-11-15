@@ -138,12 +138,8 @@ class MessageHandler {
         await this.customerHandler.getSalesInvoices(chatId);
         break;
 
-      case "invoices":
-        await this.customerHandler.getSalesInvoices(chatId);
-        break;
-
-      case "factures":
-        await this.customerHandler.getSalesInvoices(chatId);
+      case "get_customers":
+        await this.customerHandler.getCustomers(chatId);
         break;
 
       case "get_report":
