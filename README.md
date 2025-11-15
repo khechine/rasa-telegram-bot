@@ -53,19 +53,36 @@ Un bot Telegram intelligent intégré avec Rasa et ERPNext pour la gestion compl
 - **Reconnaissance d'intentions** : create_customer, list_customers, get_quotation, etc.
 - **Extraction d'entités** : nom, email, téléphone, adresse
 
-### 🏢 Intégration ERPNext
+### 🏢 Intégration ERPNext Complète
 
-- **Gestion clients** : Création, consultation, mise à jour
+- **Gestion clients** : CRUD complet (Création, consultation, mise à jour)
 - **Devis** : Création et suivi des quotations
 - **Factures** : Gestion des sales invoices
-- **Synchronisation temps réel** : Toutes les données dans ERPNext
+- **Achats** : Suivi des purchase invoices
+- **Stock** : Gestion des niveaux de stock
+- **Articles** : Catalogue des produits
 
-### 💬 Interface Utilisateur
+### 📊 Rapports Complets
 
+- **Rapports de ventes** : Factures, montants, statuts
+- **Rapports clients** : Liste, segments, territoires
+- **Rapports achats** : Fournisseurs, commandes
+- **Rapports devis** : Conversions, valeurs
+- **Rapports stock** : Niveaux, alertes, mouvements
+- **Rapports financiers** : Revenus, dépenses, marges
+- **Métriques performance** : KPIs, indicateurs clés
+- **Tableau de bord** : Vue d'ensemble temps réel
+- **Rapports personnalisés** : Support des rapports ERPNext custom
+
+### 💬 Interface Utilisateur Avancée
+
+- **Menu principal** : Navigation hiérarchique
+- **Menu rapports** : Accès rapide à tous les rapports
 - **Boutons inline** : Navigation intuitive
 - **Messages formatés** : Markdown avec emojis
-- **Gestion d'erreurs** : Messages explicites
+- **Gestion d'erreurs** : Messages explicites et contextuels
 - **Validation automatique** : Emails, données requises
+- **Pagination** : Gestion des listes longues
 
 ### 🧪 Qualité du Code
 
@@ -114,17 +131,39 @@ Bot: ✅ Client Dupont créé avec succès !
 [👤 Créer un autre client] [📋 Voir les clients] [📄 Voir les devis]
 ```
 
-### Gestion des devis
+### Gestion des rapports
 
 ```
-Utilisateur: "Voir mes devis"
-Bot: 📄 Liste des devis:
-1. Devis QTN-2025-0001
-   Client: Dupont
-   Statut: Draft
-   Total: 1500.00 TND
+Utilisateur: "Rapport de ventes"
+Bot: 📊 Rapport des Ventes
+📋 Factures de vente soumises
+
+1. SINV-2025-0001
+   Client/Fournisseur: Dupont
    Date: 15/11/2025
+   Montant: 2500.00 TND
+   Statut: Paid
+
+💰 Total: 2500.00 TND (1 documents)
 ```
+
+### Menu interactif
+
+- **📊 Rapports** : Accès au menu complet des rapports
+- **📈 Dashboard** : Vue d'ensemble des métriques
+- **💰 Ventes** : Rapport de ventes détaillé
+- **👥 Clients** : Liste et analyse clients
+- **📦 Stock** : Niveaux et alertes de stock
+- **📈 Financier** : Analyse financière mensuelle
+
+### Commandes vocales
+
+- "Donne-moi le rapport des ventes"
+- "Montre-moi les clients"
+- "Quel est le stock actuel ?"
+- "Tableau de bord"
+- "Rapport financier du mois"
+- "Métriques de performance"
 
 ### Commandes disponibles
 

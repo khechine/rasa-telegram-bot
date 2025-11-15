@@ -149,7 +149,32 @@ class ResponseBuilder {
       [{ text: "📋 Voir les clients", callback_data: "list_customers" }],
       [{ text: "📄 Voir les devis", callback_data: "get_quotation" }],
       [{ text: "📄 Voir les factures", callback_data: "get_invoices" }],
+      [
+        { text: "📊 Rapports", callback_data: "reports_menu" },
+        { text: "📈 Dashboard", callback_data: "dashboard" },
+      ],
       [{ text: "❓ Aide", callback_data: "help" }],
+    ];
+  }
+
+  static getReportsMenuKeyboard() {
+    return [
+      [
+        { text: "💰 Ventes", callback_data: "sales_report" },
+        { text: "🛒 Achats", callback_data: "purchase_report" },
+      ],
+      [
+        { text: "👥 Clients", callback_data: "customer_report" },
+        { text: "📝 Devis", callback_data: "quotation_report" },
+      ],
+      [
+        { text: "📦 Stock", callback_data: "stock_report" },
+        { text: "📈 Financier", callback_data: "financial_report" },
+      ],
+      [
+        { text: "📊 Métriques", callback_data: "metrics" },
+        { text: "⬅️ Retour", callback_data: "back_to_main" },
+      ],
     ];
   }
 

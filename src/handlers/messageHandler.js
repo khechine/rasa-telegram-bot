@@ -3,7 +3,7 @@ const CustomerHandler = require("./customerHandler");
 const Parsers = require("../utils/parsers");
 
 class MessageHandler {
-  constructor(bot, rasaService, erpnextService = null) {
+  constructor(bot, rasaService, erpnextService = null, reportHandler = null) {
     this.bot = bot;
     this.rasaService = rasaService;
     this.customerHandler = new CustomerHandler(
@@ -11,6 +11,7 @@ class MessageHandler {
       rasaService,
       erpnextService
     );
+    this.reportHandler = reportHandler;
   }
 
   async handleMessage(msg) {
@@ -119,6 +120,39 @@ class MessageHandler {
         await this.customerHandler.getSalesInvoices(chatId);
         break;
 
+      case "get_report":
+      case "sales_report":
+        await this.reportHandler.generateReport("sales", {}, chatId);
+        break;
+
+      case "customer_report":
+        await this.reportHandler.generateReport("customers", {}, chatId);
+        break;
+
+      case "purchase_report":
+        await this.reportHandler.generateReport("purchases", {}, chatId);
+        break;
+
+      case "quotation_report":
+        await this.reportHandler.generateReport("quotations", {}, chatId);
+        break;
+
+      case "stock_report":
+        await this.reportHandler.generateReport("stock", {}, chatId);
+        break;
+
+      case "dashboard":
+        await this.reportHandler.generateReport("dashboard", {}, chatId);
+        break;
+
+      case "financial_report":
+        await this.reportHandler.generateReport("financial", {}, chatId);
+        break;
+
+      case "metrics":
+        await this.reportHandler.generateReport("metrics", {}, chatId);
+        break;
+
       case "help":
         await this.handleHelpCommand(chatId);
         break;
@@ -128,6 +162,15 @@ class MessageHandler {
         break;
 
       default:
+        // Try custom report names from ERPNext report names
+        if (this.reportHandler && intent?.name) {
+          try {
+            await this.reportHandler.generateReport(intent.name, {}, chatId);
+            return;
+          } catch (error) {
+            // Continue to fallback if custom report fails
+          }
+        }
         await this.handleFallback(chatId, rasaResponse);
         break;
     }

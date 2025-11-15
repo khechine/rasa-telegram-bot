@@ -2,7 +2,7 @@ const ResponseBuilder = require("../utils/responseBuilder");
 const CustomerHandler = require("./customerHandler");
 
 class CallbackHandler {
-  constructor(bot, rasaService, erpnextService = null) {
+  constructor(bot, rasaService, erpnextService = null, reportHandler = null) {
     this.bot = bot;
     this.rasaService = rasaService;
     this.customerHandler = new CustomerHandler(
@@ -10,6 +10,7 @@ class CallbackHandler {
       rasaService,
       erpnextService
     );
+    this.reportHandler = reportHandler;
   }
 
   async handleCallback(query) {
@@ -36,6 +37,46 @@ class CallbackHandler {
 
         case "get_invoices":
           await this.handleInvoicesCallback(chatId);
+          break;
+
+        case "sales_report":
+          await this.reportHandler.generateReport("sales", {}, chatId);
+          break;
+
+        case "customer_report":
+          await this.reportHandler.generateReport("customers", {}, chatId);
+          break;
+
+        case "purchase_report":
+          await this.reportHandler.generateReport("purchases", {}, chatId);
+          break;
+
+        case "quotation_report":
+          await this.reportHandler.generateReport("quotations", {}, chatId);
+          break;
+
+        case "stock_report":
+          await this.reportHandler.generateReport("stock", {}, chatId);
+          break;
+
+        case "dashboard":
+          await this.reportHandler.generateReport("dashboard", {}, chatId);
+          break;
+
+        case "financial_report":
+          await this.reportHandler.generateReport("financial", {}, chatId);
+          break;
+
+        case "metrics":
+          await this.reportHandler.generateReport("metrics", {}, chatId);
+          break;
+
+        case "reports_menu":
+          await this.handleReportsMenuCallback(chatId);
+          break;
+
+        case "back_to_main":
+          await this.handleBackToMainCallback(chatId);
           break;
 
         case "help":
@@ -76,6 +117,26 @@ class CallbackHandler {
 
   async handleInvoicesCallback(chatId) {
     await this.customerHandler.getSalesInvoices(chatId);
+  }
+
+  async handleReportsMenuCallback(chatId) {
+    const message =
+      "📊 *Menu des Rapports*\n\nChoisissez le type de rapport souhaité :";
+    await this.bot.sendMessage(chatId, message, {
+      parse_mode: "Markdown",
+      reply_markup: {
+        inline_keyboard: ResponseBuilder.getReportsMenuKeyboard(),
+      },
+    });
+  }
+
+  async handleBackToMainCallback(chatId) {
+    const message = "🏠 Retour au menu principal";
+    await this.bot.sendMessage(chatId, message, {
+      reply_markup: {
+        inline_keyboard: ResponseBuilder.getMainMenuKeyboard(),
+      },
+    });
   }
 
   async handleHelpCallback(chatId) {

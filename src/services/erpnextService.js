@@ -306,6 +306,297 @@ class ERPNextService {
       throw new Error(`Failed to insert ${doctype}: ${error.message}`);
     }
   }
+
+  // Reporting methods
+  async getSalesReport(filters = {}) {
+    try {
+      const query = {
+        doctype: "Sales Invoice",
+        fields: [
+          "name",
+          "customer",
+          "posting_date",
+          "total",
+          "status",
+          "grand_total",
+        ],
+        filters: {
+          docstatus: 1, // Submitted documents only
+          ...filters,
+        },
+        order_by: "posting_date desc",
+        limit: 50,
+      };
+
+      const response = await this.frappe.db.get_list(query);
+      return response;
+    } catch (error) {
+      console.error("Error getting sales report from ERPNext:", error);
+      throw new Error(`Failed to get sales report: ${error.message}`);
+    }
+  }
+
+  async getCustomerReport(filters = {}) {
+    try {
+      const response = await this.frappe.db.get_list("Customer", {
+        fields: [
+          "name",
+          "customer_name",
+          "email_id",
+          "mobile_no",
+          "territory",
+          "customer_group",
+          "creation",
+        ],
+        filters: filters,
+        order_by: "creation desc",
+        limit: 100,
+      });
+      return response;
+    } catch (error) {
+      console.error("Error getting customer report from ERPNext:", error);
+      throw new Error(`Failed to get customer report: ${error.message}`);
+    }
+  }
+
+  async getPurchaseReport(filters = {}) {
+    try {
+      const response = await this.frappe.db.get_list("Purchase Invoice", {
+        fields: [
+          "name",
+          "supplier",
+          "posting_date",
+          "total",
+          "status",
+          "grand_total",
+        ],
+        filters: {
+          docstatus: 1,
+          ...filters,
+        },
+        order_by: "posting_date desc",
+        limit: 50,
+      });
+      return response;
+    } catch (error) {
+      console.error("Error getting purchase report from ERPNext:", error);
+      throw new Error(`Failed to get purchase report: ${error.message}`);
+    }
+  }
+
+  async getInvoiceReport(filters = {}) {
+    try {
+      const response = await this.frappe.db.get_list("Sales Invoice", {
+        fields: [
+          "name",
+          "customer",
+          "posting_date",
+          "due_date",
+          "total",
+          "outstanding_amount",
+          "status",
+        ],
+        filters: {
+          docstatus: 1,
+          ...filters,
+        },
+        order_by: "posting_date desc",
+        limit: 50,
+      });
+      return response;
+    } catch (error) {
+      console.error("Error getting invoice report from ERPNext:", error);
+      throw new Error(`Failed to get invoice report: ${error.message}`);
+    }
+  }
+
+  async getQuotationReport(filters = {}) {
+    try {
+      const response = await this.frappe.db.get_list("Quotation", {
+        fields: [
+          "name",
+          "quotation_to",
+          "party_name",
+          "transaction_date",
+          "total",
+          "status",
+          "valid_till",
+        ],
+        filters: {
+          docstatus: ["!=", 2], // Not cancelled
+          ...filters,
+        },
+        order_by: "transaction_date desc",
+        limit: 50,
+      });
+      return response;
+    } catch (error) {
+      console.error("Error getting quotation report from ERPNext:", error);
+      throw new Error(`Failed to get quotation report: ${error.message}`);
+    }
+  }
+
+  async getStockReport(filters = {}) {
+    try {
+      const response = await this.frappe.db.get_list("Stock Ledger Entry", {
+        fields: [
+          "item_code",
+          "warehouse",
+          "posting_date",
+          "actual_qty",
+          "valuation_rate",
+          "stock_value",
+        ],
+        filters: {
+          ...filters,
+          is_cancelled: 0,
+        },
+        order_by: "posting_date desc",
+        limit: 100,
+        group_by: "item_code, warehouse",
+      });
+      return response;
+    } catch (error) {
+      console.error("Error getting stock report from ERPNext:", error);
+      throw new Error(`Failed to get stock report: ${error.message}`);
+    }
+  }
+
+  async getItemReport(filters = {}) {
+    try {
+      const response = await this.frappe.db.get_list("Item", {
+        fields: [
+          "name",
+          "item_name",
+          "item_group",
+          "stock_uom",
+          "valuation_rate",
+          "last_purchase_rate",
+        ],
+        filters: filters,
+        order_by: "item_name",
+        limit: 100,
+      });
+      return response;
+    } catch (error) {
+      console.error("Error getting item report from ERPNext:", error);
+      throw new Error(`Failed to get item report: ${error.message}`);
+    }
+  }
+
+  async getCustomReport(reportName, filters = {}) {
+    try {
+      // Use ERPNext's report API
+      const response = await this.frappe.call({
+        method: "frappe.desk.query_report.run",
+        args: {
+          report_name: reportName,
+          filters: filters,
+          ignore_prepared_report: 1,
+        },
+      });
+      return response.message || [];
+    } catch (error) {
+      console.error(
+        `Error getting custom report ${reportName} from ERPNext:`,
+        error
+      );
+      throw new Error(`Failed to get custom report: ${error.message}`);
+    }
+  }
+
+  async getDashboardData() {
+    try {
+      const [sales, customers, quotations, stock] = await Promise.allSettled([
+        this.getSalesReport({ limit: 10 }),
+        this.getCustomerReport({ limit: 10 }),
+        this.getQuotationReport({ limit: 10 }),
+        this.getStockReport({ limit: 10 }),
+      ]);
+
+      return {
+        sales: sales.status === "fulfilled" ? sales.value : [],
+        customers: customers.status === "fulfilled" ? customers.value : [],
+        quotations: quotations.status === "fulfilled" ? quotations.value : [],
+        stock: stock.status === "fulfilled" ? stock.value : [],
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error("Error getting dashboard data from ERPNext:", error);
+      throw new Error(`Failed to get dashboard data: ${error.message}`);
+    }
+  }
+
+  async getFinancialSummary(period = "monthly") {
+    try {
+      // Get financial data using ERPNext's built-in reports
+      const salesData = await this.getCustomReport("Sales Analytics", {
+        period: period,
+        based_on: "Item",
+      });
+
+      const purchaseData = await this.getCustomReport("Purchase Analytics", {
+        period: period,
+        based_on: "Item",
+      });
+
+      return {
+        sales: salesData,
+        purchases: purchaseData,
+        period: period,
+        generated_at: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error("Error getting financial summary from ERPNext:", error);
+      throw new Error(`Failed to get financial summary: ${error.message}`);
+    }
+  }
+
+  async getPerformanceMetrics() {
+    try {
+      const [totalCustomers, totalSales, pendingInvoices, lowStockItems] =
+        await Promise.allSettled([
+          this.frappe.db.get_list("Customer", {
+            fields: ["count(name) as total"],
+          }),
+          this.frappe.db.get_list("Sales Invoice", {
+            fields: ["sum(grand_total) as total"],
+            filters: { docstatus: 1 },
+          }),
+          this.frappe.db.get_list("Sales Invoice", {
+            fields: ["count(name) as count"],
+            filters: { docstatus: 1, outstanding_amount: [">", 0] },
+          }),
+          this.frappe.db.get_list("Bin", {
+            fields: ["item_code", "actual_qty"],
+            filters: { actual_qty: ["<=", 10] },
+          }),
+        ]);
+
+      return {
+        total_customers:
+          totalCustomers.status === "fulfilled"
+            ? totalCustomers.value[0]?.total || 0
+            : 0,
+        total_sales:
+          totalSales.status === "fulfilled"
+            ? totalSales.value[0]?.total || 0
+            : 0,
+        pending_invoices:
+          pendingInvoices.status === "fulfilled"
+            ? pendingInvoices.value[0]?.count || 0
+            : 0,
+        low_stock_items:
+          lowStockItems.status === "fulfilled"
+            ? lowStockItems.value.length || 0
+            : 0,
+        generated_at: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error("Error getting performance metrics from ERPNext:", error);
+      throw new Error(`Failed to get performance metrics: ${error.message}`);
+    }
+  }
 }
 
 module.exports = ERPNextService;
