@@ -65,6 +65,9 @@ class MessageHandler {
       case "/customers":
         await this.customerHandler.getCustomers(chatId);
         break;
+      case "/invoices":
+        await this.customerHandler.getSalesInvoices(chatId);
+        break;
       default:
         await this.bot.sendMessage(
           chatId,
@@ -119,11 +122,27 @@ class MessageHandler {
         await this.customerHandler.getCustomers(chatId);
         break;
 
+      case "customers":
+        await this.customerHandler.getCustomers(chatId);
+        break;
+
+      case "clients":
+        await this.customerHandler.getCustomers(chatId);
+        break;
+
       case "get_quotation":
         await this.customerHandler.getQuotations(chatId);
         break;
 
       case "get_invoices":
+        await this.customerHandler.getSalesInvoices(chatId);
+        break;
+
+      case "invoices":
+        await this.customerHandler.getSalesInvoices(chatId);
+        break;
+
+      case "factures":
         await this.customerHandler.getSalesInvoices(chatId);
         break;
 
