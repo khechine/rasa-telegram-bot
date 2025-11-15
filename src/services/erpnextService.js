@@ -106,12 +106,23 @@ class ERPNextService {
 
   async getCustomers() {
     try {
-      const response = await this.frappe.db.get_list("Customer", {
-        fields: ["name", "customer_name", "email_id", "mobile_no", "creation"],
-        limit: 50,
+      const response = await this.frappe.call({
+        method: "frappe.client.get_list",
+        args: {
+          doctype: "Customer",
+          fields: [
+            "name",
+            "customer_name",
+            "email_id",
+            "mobile_no",
+            "creation",
+          ],
+          limit_page_length: 50,
+        },
       });
 
-      return response.map((customer) => ({
+      const customers = response.message || [];
+      return customers.map((customer) => ({
         id: customer.name,
         name: customer.customer_name,
         email: customer.email_id,
@@ -242,20 +253,25 @@ class ERPNextService {
         filters.customer = customerId;
       }
 
-      const response = await this.frappe.db.get_list("Sales Invoice", {
-        fields: [
-          "name",
-          "customer",
-          "status",
-          "total",
-          "posting_date",
-          "creation",
-        ],
-        filters: filters,
-        limit: 20,
+      const response = await this.frappe.call({
+        method: "frappe.client.get_list",
+        args: {
+          doctype: "Sales Invoice",
+          fields: [
+            "name",
+            "customer",
+            "status",
+            "total",
+            "posting_date",
+            "creation",
+          ],
+          filters: filters,
+          limit_page_length: 20,
+        },
       });
 
-      return response.map((invoice) => ({
+      const invoices = response.message || [];
+      return invoices.map((invoice) => ({
         id: invoice.name,
         customerId: invoice.customer,
         status: invoice.status,
