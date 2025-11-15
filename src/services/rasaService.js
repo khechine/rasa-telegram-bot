@@ -16,19 +16,12 @@ class RasaService {
         },
       };
 
-      console.log(
-        `Sending to Rasa: ${this.fullUrl}`,
-        JSON.stringify(payload, null, 2)
-      );
-
       const response = await axios.post(this.fullUrl, payload, {
         timeout: 10000, // 10 seconds timeout
         headers: {
           "Content-Type": "application/json",
         },
       });
-
-      console.log(`Rasa response:`, JSON.stringify(response.data, null, 2));
 
       return this.parseRasaResponse(response.data);
     } catch (error) {
@@ -39,8 +32,13 @@ class RasaService {
   }
 
   parseRasaResponse(rasaData) {
+    // Handle empty response (no intent recognized)
     if (!Array.isArray(rasaData) || rasaData.length === 0) {
-      throw new Error("Invalid Rasa response format");
+      return {
+        intent: { name: "nlu_fallback", confidence: 0.0 },
+        entities: [],
+        text: "",
+      };
     }
 
     const firstResponse = rasaData[0];
